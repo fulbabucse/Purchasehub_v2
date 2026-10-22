@@ -1,0 +1,6 @@
+{
+  "name": "Purchase Hub – Beauty, Grooming & Lifestyle",
+  "description": "Bilingual cosmetics, skincare, luxury perfume, men's grooming, and lifestyle accessories catalog in Bangladesh with direct WhatsApp and phone ordering.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
