@@ -1,4 +1,4 @@
-export type Language = 'bn' | 'en';
+export type Language = 'en' | 'bn';
 
 export type WarrantyStatus = 'yes' | 'no' | 'not_applicable';
 
@@ -6,6 +6,51 @@ export interface Profile {
   id: string;
   role: 'admin' | 'user';
   created_at: string;
+}
+
+export interface AdminUser {
+  id: string;
+  name: string;
+  email: string; // used as User ID / Email for login
+  password: string; // admin credential
+  role: 'super_admin' | 'admin' | 'manager';
+  is_active: boolean;
+  created_at: string;
+}
+
+export type OrderStatus = 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'rejected';
+export type PaymentMethod = 'cod' | 'bkash' | 'nagad' | 'rocket';
+export type DeliveryZone = 'inside_dhaka' | 'outside_dhaka';
+
+export interface OrderItem {
+  productId: string;
+  sku: string;
+  name_en: string;
+  name_bn: string;
+  image?: string;
+  price: number;
+  quantity: number;
+}
+
+export interface Order {
+  id: string; // e.g. PH-10924
+  customerName: string;
+  customerPhone: string; // for filtering
+  customerEmail: string; // for filtering
+  customerAddress: string;
+  deliveryZone: DeliveryZone;
+  deliveryCharge: number;
+  items: OrderItem[];
+  subtotal: number;
+  total: number;
+  paymentMethod: PaymentMethod;
+  paymentStatus: 'pending' | 'paid';
+  status: OrderStatus;
+  note?: string;
+  rejectionReason?: string;
+  approved_at?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Category {

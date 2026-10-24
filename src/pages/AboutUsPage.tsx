@@ -92,7 +92,7 @@ export const AboutUsPage: React.FC = () => {
           </div>
           <div className="flex items-center gap-3">
             <a
-              href={`https://wa.me/${(settings.whatsapp_number || '+8801576924003').replace(/[^0-9]/g, '')}`}
+              href={`https://wa.me/8801705776631`}
               target="_blank"
               rel="noopener noreferrer"
               className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl flex items-center gap-2"

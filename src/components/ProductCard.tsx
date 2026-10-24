@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MessageCircle, Eye, AlertCircle, Check, Tag } from 'lucide-react';
+import { Eye, AlertCircle, Check, Tag, ShoppingBag, Zap } from 'lucide-react';
 import { Product } from '../types/database';
 import { useApp } from '../context/AppContext';
 
@@ -15,7 +15,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     navigateToProduct, 
     brands, 
     categories, 
-    getWhatsAppOrderUrl 
+    getWhatsAppOrderUrl,
+    openPlaceOrder,
+    addToCart
   } = useApp();
 
   const [imgError, setImgError] = useState(false);
@@ -156,29 +158,53 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
         </div>
 
-        {/* Action Buttons */}
-        <div className="mt-4 pt-3 border-t border-[#F3E8EB] flex items-center gap-2">
-          <button
-            onClick={() => navigateToProduct(product.id)}
-            className="flex-1 py-2 px-3 bg-[#FAF8F7] hover:bg-[#F3E8EB] text-[#1E232A] text-xs font-semibold rounded-lg transition-colors text-center border border-[#E8D4D9]"
-          >
-            {t('view_details')}
-          </button>
-          
-          <a
-            href={getWhatsAppOrderUrl(product, 1)}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={`Order ${name} on WhatsApp`}
-            className="p-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-colors"
-            title={t('whatsapp_order_btn')}
-          >
-            <MessageCircle className="w-4 h-4" />
-          </a>
+          {/* Action Buttons: Order Now & Add to Bag */}
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              disabled={isOutOfStock}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (isOutOfStock) return;
+                addToCart(product, 1);
+              }}
+              className="w-full py-2 px-2 bg-[#FAF8F7] hover:bg-[#F3E8EB] text-[#1E232A] text-xs font-semibold rounded-xl transition-colors border border-[#E8D4D9] flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ShoppingBag className="w-3.5 h-3.5 text-[#B76E79]" />
+              <span>Add to Bag</span>
+            </button>
+
+            <button
+              type="button"
+              disabled={isOutOfStock}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (isOutOfStock) return;
+                openPlaceOrder([
+                  {
+                    productId: product.id,
+                    sku: product.sku,
+                    name_en: product.name_en,
+                    name_bn: product.name_bn,
+                    price: currentPrice,
+                    quantity: 1,
+                    image: imageSrc
+                  }
+                ]);
+              }}
+              className={`w-full py-2 px-2 text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-2xs ${
+                isOutOfStock 
+                  ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                  : 'bg-[#1E232A] hover:bg-[#B76E79] text-white active:scale-98 cursor-pointer'
+              }`}
+            >
+              <Zap className="w-3.5 h-3.5 text-amber-400 fill-current" />
+              <span>{isOutOfStock ? t('out_of_stock') : 'Order Now'}</span>
+            </button>
+          </div>
+
         </div>
 
       </div>
-
-    </div>
   );
 };

@@ -5,7 +5,11 @@ import {
   Category, 
   Brand, 
   Banner, 
-  StoreSettings 
+  StoreSettings,
+  Order,
+  OrderItem,
+  OrderStatus,
+  AdminUser
 } from '../types/database';
 import { translations, TranslationKey } from '../locales/translations';
 import { 
@@ -24,6 +28,7 @@ export type PageView =
   | 'mens-collection'
   | 'womens-collection'
   | 'beauty-skincare'
+  | 'electric-gadgets'
   | 'makeup'
   | 'perfume-fragrance'
   | 'hair-care'
@@ -85,10 +90,46 @@ interface AppContextType {
   getWhatsAppOrderUrl: (product: Product, quantity?: number) => string;
   getCallOrderUrl: () => string;
   
-  // Admin Operations
+  // Place Order & Cart System
+  orders: Order[];
+  createOrder: (orderData: Omit<Order, 'id' | 'created_at' | 'updated_at'>) => Promise<Order>;
+  updateOrderStatus: (orderId: string, status: OrderStatus, reason?: string) => Promise<boolean>;
+  approveOrder: (orderId: string) => Promise<boolean>;
+  rejectOrder: (orderId: string, reason?: string) => Promise<boolean>;
+  deleteOrder: (orderId: string) => Promise<boolean>;
+  filterOrdersByPhoneOrEmail: (query: string) => Order[];
+  
+  // Place Order Modal
+  isPlaceOrderOpen: boolean;
+  setIsPlaceOrderOpen: (open: boolean) => void;
+  checkoutItems: OrderItem[];
+  openPlaceOrder: (items?: OrderItem[]) => void;
+  closePlaceOrder: () => void;
+
+  // Order Tracking Modal
+  isTrackingModalOpen: boolean;
+  setIsTrackingModalOpen: (open: boolean) => void;
+  trackingQuery: string;
+  setTrackingQuery: (query: string) => void;
+
+  // Shopping Bag / Cart
+  cart: OrderItem[];
+  addToCart: (product: Product, quantity?: number) => void;
+  removeFromCart: (productId: string) => void;
+  updateCartQuantity: (productId: string, quantity: number) => void;
+  clearCart: () => void;
+  isCartOpen: boolean;
+  setIsCartOpen: (open: boolean) => void;
+
+  // Admin Operations & Multi-Admin System
   isAdminLoggedIn: boolean;
-  loginAdmin: (password: string) => boolean;
+  currentAdminUser: AdminUser | null;
+  adminUsers: AdminUser[];
+  loginAdmin: (identifier: string, password?: string) => boolean;
   logoutAdmin: () => void;
+  addAdminUser: (adminData: Omit<AdminUser, 'id' | 'created_at'>) => Promise<boolean>;
+  updateAdminUser: (id: string, updates: Partial<AdminUser>) => Promise<boolean>;
+  deleteAdminUser: (id: string) => Promise<boolean>;
   addProduct: (product: Partial<Product>) => Promise<boolean>;
   updateProduct: (id: string, updates: Partial<Product>) => Promise<boolean>;
   deleteProduct: (id: string) => Promise<boolean>;
@@ -113,21 +154,20 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // 1. Language State (Default: Bengali)
-  const [language, setLanguageState] = useState<Language>(() => {
-    const saved = localStorage.getItem('purchase_hub_lang');
-    return (saved === 'en' || saved === 'bn') ? saved : 'bn';
-  });
+  // 1. Language State (English-Only Mode as requested)
+  const [language, setLanguageState] = useState<Language>('en');
 
-  const setLanguage = (lang: Language) => {
-    setLanguageState(lang);
-    localStorage.setItem('purchase_hub_lang', lang);
-    document.documentElement.lang = lang;
+  const setLanguage = (_lang: Language) => {
+    // English is enforced
+    setLanguageState('en');
+    localStorage.setItem('purchase_hub_lang', 'en');
+    document.documentElement.lang = 'en';
   };
 
   useEffect(() => {
-    document.documentElement.lang = language;
-  }, [language]);
+    localStorage.setItem('purchase_hub_lang', 'en');
+    document.documentElement.lang = 'en';
+  }, []);
 
   // 2. Navigation State
   const [currentView, setCurrentView] = useState<PageView>('home');
@@ -177,14 +217,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (saved) {
       try { 
         const parsed = JSON.parse(saved);
-        // If saved settings still contain the old dummy phone, Banani address, or old email, update with new details
+        // Migrate any previous phone numbers to the official requested 01705776631
         if (
-          parsed.phone_number === '+8801811000000' || 
-          parsed.phone_number === '01711000000' || 
-          parsed.address_en?.includes('Banani') ||
-          parsed.email?.includes('purchasehub.com.bd')
+          !parsed.phone_number ||
+          parsed.phone_number.includes('01576') || 
+          parsed.phone_number.includes('01811') ||
+          parsed.phone_number.includes('01711') ||
+          parsed.whatsapp_number?.includes('01576')
         ) {
-          return { ...parsed, ...INITIAL_SETTINGS, email: 'purchasehub16@gmail.com' };
+          return { 
+            ...parsed, 
+            ...INITIAL_SETTINGS,
+            phone_number: '01705776631',
+            whatsapp_number: '01705776631'
+          };
         }
         return parsed;
       } catch (e) { /* ignore */ }
@@ -283,27 +329,146 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setSortOption('featured');
   };
 
-  // 5. Admin Authentication State
+  // 5. Admin Authentication & Multi-Admin State
+  const BASE_ADMIN: AdminUser = {
+    id: 'admin-shawon',
+    name: 'Shawon (Super Admin)',
+    email: 'shawon_admin@purchase-hub.com',
+    password: 'Purch@seHub02122023',
+    role: 'super_admin',
+    is_active: true,
+    created_at: '2023-12-02T00:00:00.000Z'
+  };
+
+  const [adminUsers, setAdminUsers] = useState<AdminUser[]>(() => {
+    const saved = localStorage.getItem('purchase_hub_admin_users');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const hasShawon = parsed.some(u => u.email.toLowerCase() === 'shawon_admin@purchase-hub.com');
+          if (!hasShawon) {
+            return [BASE_ADMIN, ...parsed];
+          }
+          return parsed.map(u => {
+            if (u.email.toLowerCase() === 'shawon_admin@purchase-hub.com') {
+              return { 
+                ...u, 
+                password: 'Purch@seHub02122023', 
+                role: 'super_admin', 
+                is_active: true,
+                name: u.name || 'Shawon (Super Admin)'
+              };
+            }
+            return u;
+          });
+        }
+      } catch (e) { /* fallback */ }
+    }
+    return [BASE_ADMIN];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('purchase_hub_admin_users', JSON.stringify(adminUsers));
+  }, [adminUsers]);
+
+  const [currentAdminUser, setCurrentAdminUser] = useState<AdminUser | null>(() => {
+    const saved = localStorage.getItem('purchase_hub_current_admin');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { /* ignore */ }
+    }
+    return null;
+  });
+
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState<boolean>(() => {
     return localStorage.getItem('purchase_hub_admin_logged_in') === 'true';
   });
 
-  const loginAdmin = (password: string): boolean => {
-    // Protected admin authentication
-    if (password === 'Purch@#$_&-+()/0') {
+  const loginAdmin = (identifier: string, password?: string): boolean => {
+    const inputId = password !== undefined ? identifier.trim().toLowerCase() : '';
+    const inputPass = password !== undefined ? password : identifier;
+
+    // Check base admin account
+    if (
+      (inputId === 'shawon_admin@purchase-hub.com' || !inputId) && 
+      inputPass === 'Purch@seHub02122023'
+    ) {
       setIsAdminLoggedIn(true);
+      setCurrentAdminUser(BASE_ADMIN);
       localStorage.setItem('purchase_hub_admin_logged_in', 'true');
-      showToast(language === 'bn' ? 'অ্যাডমিন হিসেবে লগইন সম্পন্ন হয়েছে' : 'Successfully logged in as administrator', 'success');
+      localStorage.setItem('purchase_hub_current_admin', JSON.stringify(BASE_ADMIN));
+      showToast('Successfully logged in as Shawon (Super Admin)', 'success');
       return true;
     }
-    showToast(language === 'bn' ? 'ভুল পাসওয়ার্ড! আবার চেষ্টা করুন' : 'Invalid admin password. Try again.', 'error');
+
+    // Check any active admin in adminUsers
+    const matched = adminUsers.find(u => {
+      const emailMatches = !inputId || u.email.toLowerCase() === inputId;
+      return emailMatches && u.password === inputPass && u.is_active;
+    });
+
+    if (matched) {
+      setIsAdminLoggedIn(true);
+      setCurrentAdminUser(matched);
+      localStorage.setItem('purchase_hub_admin_logged_in', 'true');
+      localStorage.setItem('purchase_hub_current_admin', JSON.stringify(matched));
+      showToast(`Successfully logged in as ${matched.name}`, 'success');
+      return true;
+    }
+
+    showToast('Invalid User ID or Password! Please verify credentials.', 'error');
     return false;
   };
 
   const logoutAdmin = () => {
     setIsAdminLoggedIn(false);
+    setCurrentAdminUser(null);
     localStorage.removeItem('purchase_hub_admin_logged_in');
-    showToast(language === 'bn' ? 'লগআউট সম্পন্ন হয়েছে' : 'Logged out successfully', 'info');
+    localStorage.removeItem('purchase_hub_current_admin');
+    showToast('Logged out of admin panel', 'info');
+  };
+
+  const addAdminUser = async (adminData: Omit<AdminUser, 'id' | 'created_at'>): Promise<boolean> => {
+    const exists = adminUsers.some(u => u.email.toLowerCase() === adminData.email.trim().toLowerCase());
+    if (exists) {
+      showToast('An admin with this User ID / Email already exists!', 'error');
+      return false;
+    }
+    const newAdmin: AdminUser = {
+      ...adminData,
+      id: 'admin-' + Date.now(),
+      email: adminData.email.trim().toLowerCase(),
+      created_at: new Date().toISOString()
+    };
+    setAdminUsers(prev => [...prev, newAdmin]);
+    showToast(`Admin user "${newAdmin.name}" added successfully!`, 'success');
+    return true;
+  };
+
+  const updateAdminUser = async (id: string, updates: Partial<AdminUser>): Promise<boolean> => {
+    setAdminUsers(prev => prev.map(u => {
+      if (u.id === id) {
+        return {
+          ...u,
+          ...updates,
+          email: updates.email ? updates.email.trim().toLowerCase() : u.email
+        };
+      }
+      return u;
+    }));
+    showToast('Admin account details updated', 'success');
+    return true;
+  };
+
+  const deleteAdminUser = async (id: string): Promise<boolean> => {
+    const target = adminUsers.find(u => u.id === id);
+    if (target?.email.toLowerCase() === 'shawon_admin@purchase-hub.com') {
+      showToast('The base admin account (shawon_admin@purchase-hub.com) cannot be deleted!', 'error');
+      return false;
+    }
+    setAdminUsers(prev => prev.filter(u => u.id !== id));
+    showToast('Admin account removed', 'info');
+    return true;
   };
 
   // 6. Toasts State
@@ -319,10 +484,325 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setToasts(prev => prev.filter(t => t.id !== id));
   };
 
-  // 7. Localization Helper
+  // 7. Orders State & Persistence (with Initial Demo Orders)
+  const INITIAL_ORDERS: Order[] = [
+    {
+      id: 'PH-10291',
+      customerName: 'Sadia Islam',
+      customerPhone: '01705776631',
+      customerEmail: 'purchasehub16@gmail.com',
+      customerAddress: 'Nilachal, 408/2, North Kazipara, Mirpur, Dhaka-1216',
+      deliveryZone: 'inside_dhaka',
+      deliveryCharge: 60,
+      items: [
+        {
+          productId: 'p-1',
+          sku: 'SKU-LUM-01',
+          name_en: 'Luminous Glow Hydrating Serum',
+          name_bn: 'লুমিনাস গ্লো হাইড্রেটিং সিরাম',
+          price: 2450,
+          quantity: 1,
+          image: '/src/assets/images/hero_cosmetics_luxury_1792601571677.jpg'
+        }
+      ],
+      subtotal: 2450,
+      total: 2510,
+      paymentMethod: 'cod',
+      paymentStatus: 'pending',
+      status: 'confirmed',
+      note: 'Please call before delivery',
+      created_at: new Date(Date.now() - 3600000 * 24).toISOString(),
+      updated_at: new Date(Date.now() - 3600000 * 20).toISOString()
+    },
+    {
+      id: 'PH-10292',
+      customerName: 'তানভীর আহমেদ',
+      customerPhone: '01712345678',
+      customerEmail: 'tanvir@gmail.com',
+      customerAddress: 'House 12, Road 4, Sector 7, Uttara, Dhaka',
+      deliveryZone: 'inside_dhaka',
+      deliveryCharge: 60,
+      items: [
+        {
+          productId: 'p-4',
+          sku: 'SKU-OUD-04',
+          name_en: 'Velvet Oud Eau De Parfum 100ml',
+          name_bn: 'ভেলভেট উদ পারফিউম ১০০ মিলি',
+          price: 4950,
+          quantity: 1,
+          image: '/src/assets/images/hero_cosmetics_luxury_1792601571677.jpg'
+        }
+      ],
+      subtotal: 4950,
+      total: 5010,
+      paymentMethod: 'bkash',
+      paymentStatus: 'paid',
+      status: 'shipped',
+      note: 'Urgent delivery requested',
+      created_at: new Date(Date.now() - 3600000 * 12).toISOString(),
+      updated_at: new Date(Date.now() - 3600000 * 4).toISOString()
+    }
+  ];
+
+  const [orders, setOrders] = useState<Order[]>(() => {
+    const saved = localStorage.getItem('purchase_hub_orders');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { /* ignore */ }
+    }
+    return INITIAL_ORDERS;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('purchase_hub_orders', JSON.stringify(orders));
+  }, [orders]);
+
+  // 8. Shopping Bag / Cart State
+  const [cart, setCart] = useState<OrderItem[]>(() => {
+    const saved = localStorage.getItem('purchase_hub_cart');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { /* ignore */ }
+    }
+    return [];
+  });
+  const [isCartOpen, setIsCartOpen] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem('purchase_hub_cart', JSON.stringify(cart));
+  }, [cart]);
+
+  const addToCart = (product: Product, quantity = 1) => {
+    const primaryImg = product.images?.find(i => i.is_primary) || product.images?.[0];
+    const itemPrice = product.sale_price !== null && product.sale_price !== undefined 
+      ? product.sale_price 
+      : product.price;
+
+    setCart(prev => {
+      const existing = prev.find(i => i.productId === product.id);
+      if (existing) {
+        return prev.map(i => 
+          i.productId === product.id 
+            ? { ...i, quantity: Math.min(product.stock_quantity, i.quantity + quantity) } 
+            : i
+        );
+      }
+      return [
+        ...prev,
+        {
+          productId: product.id,
+          sku: product.sku,
+          name_en: product.name_en,
+          name_bn: product.name_bn,
+          image: primaryImg?.storage_path || '/src/assets/images/hero_cosmetics_luxury_1792601571677.jpg',
+          price: itemPrice,
+          quantity: Math.min(product.stock_quantity, quantity)
+        }
+      ];
+    });
+
+    showToast(
+      language === 'bn' 
+        ? `${product.name_bn || product.name_en} ব্যাগে যুক্ত করা হয়েছে` 
+        : `Added ${product.name_en} to bag`, 
+      'success'
+    );
+  };
+
+  const removeFromCart = (productId: string) => {
+    setCart(prev => prev.filter(i => i.productId !== productId));
+    showToast(language === 'bn' ? 'ব্যাগ থেকে সরানো হয়েছে' : 'Removed from bag', 'info');
+  };
+
+  const updateCartQuantity = (productId: string, quantity: number) => {
+    if (quantity <= 0) {
+      removeFromCart(productId);
+      return;
+    }
+    const product = products.find(p => p.id === productId);
+    const maxStock = product ? product.stock_quantity : 99;
+    setCart(prev => prev.map(i => i.productId === productId ? { ...i, quantity: Math.min(maxStock, quantity) } : i));
+  };
+
+  const clearCart = () => {
+    setCart([]);
+  };
+
+  // 9. Place Order Modal State
+  const [isPlaceOrderOpen, setIsPlaceOrderOpen] = useState(false);
+  const [checkoutItems, setCheckoutItems] = useState<OrderItem[]>([]);
+
+  const openPlaceOrder = (items?: OrderItem[]) => {
+    if (items && items.length > 0) {
+      setCheckoutItems(items);
+    } else if (cart.length > 0) {
+      setCheckoutItems(cart);
+    } else {
+      showToast(language === 'bn' ? 'অর্ডার করার জন্য কোনো পণ্য নির্বাচন করা হয়নি' : 'No items selected for order', 'error');
+      return;
+    }
+    setIsPlaceOrderOpen(true);
+  };
+
+  const closePlaceOrder = () => {
+    setIsPlaceOrderOpen(false);
+  };
+
+  // 10. Order Tracking Modal State
+  const [isTrackingModalOpen, setIsTrackingModalOpen] = useState(false);
+  const [trackingQuery, setTrackingQuery] = useState('');
+
+  // 11. Order Actions & Mobile/Email Filter
+  const createOrder = async (orderData: Omit<Order, 'id' | 'created_at' | 'updated_at'>): Promise<Order> => {
+    const randomSuffix = Math.floor(10000 + Math.random() * 90000);
+    const orderId = `PH-${randomSuffix}`;
+
+    const newOrder: Order = {
+      ...orderData,
+      id: orderId,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    // Update stock quantity for ordered products
+    newOrder.items.forEach(item => {
+      setProducts(prev => prev.map(p => {
+        if (p.id === item.productId) {
+          const newStock = Math.max(0, p.stock_quantity - item.quantity);
+          return { ...p, stock_quantity: newStock };
+        }
+        return p;
+      }));
+    });
+
+    setOrders(prev => [newOrder, ...prev]);
+
+    // Optional Supabase insertion
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await supabase.from('orders').insert([newOrder]);
+      } catch (e) {
+        /* local state maintained */
+      }
+    }
+
+    showToast(
+      language === 'bn' 
+        ? `অর্ডার #${orderId} সফলভাবে গৃহীত হয়েছে!` 
+        : `Order #${orderId} placed successfully!`, 
+      'success'
+    );
+
+    return newOrder;
+  };
+
+  const updateOrderStatus = async (orderId: string, status: OrderStatus, reason?: string): Promise<boolean> => {
+    setOrders(prev => prev.map(o => {
+      if (o.id === orderId) {
+        // Automatically convert paymentStatus to 'paid' when shipped or delivered as requested
+        const paymentStatus = (status === 'shipped' || status === 'delivered') ? 'paid' : o.paymentStatus;
+        return {
+          ...o,
+          status,
+          paymentStatus,
+          rejectionReason: reason || (status === 'cancelled' || status === 'rejected' ? o.rejectionReason : undefined),
+          approved_at: (status === 'confirmed' || status === 'processing' || status === 'shipped' || status === 'delivered') ? (o.approved_at || new Date().toISOString()) : o.approved_at,
+          updated_at: new Date().toISOString()
+        };
+      }
+      return o;
+    }));
+    showToast(
+      `Order #${orderId} status updated to ${status}${status === 'shipped' || status === 'delivered' ? ' (Payment status converted to Paid)' : ''}`, 
+      'success'
+    );
+    return true;
+  };
+
+  const approveOrder = async (orderId: string): Promise<boolean> => {
+    setOrders(prev => prev.map(o => {
+      if (o.id === orderId) {
+        return {
+          ...o,
+          status: 'confirmed',
+          rejectionReason: undefined,
+          approved_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+      }
+      return o;
+    }));
+    showToast(`Order #${orderId} approved and confirmed successfully!`, 'success');
+    return true;
+  };
+
+  const rejectOrder = async (orderId: string, reason?: string): Promise<boolean> => {
+    setOrders(prev => prev.map(o => {
+      if (o.id === orderId) {
+        return {
+          ...o,
+          status: 'cancelled',
+          rejectionReason: reason || 'Rejected by administrator',
+          updated_at: new Date().toISOString()
+        };
+      }
+      return o;
+    }));
+    showToast(`Order #${orderId} marked as not approved / rejected`, 'info');
+    return true;
+  };
+
+  const deleteOrder = async (orderId: string): Promise<boolean> => {
+    setOrders(prev => prev.filter(o => o.id !== orderId));
+    showToast(`Order #${orderId} deleted successfully`, 'info');
+    return true;
+  };
+
+  // Helper to normalize Bengali digits to English digits
+  const toEnDigits = (str: string): string => {
+    const bnNums = ['০','১','২','৩','৪','৫','৬','৭','৮','৯'];
+    return str.replace(/[০-৯]/g, d => String(bnNums.indexOf(d)));
+  };
+
+  // Filtering by Customer Mobile Number, Email, Order ID, or Name
+  const filterOrdersByPhoneOrEmail = (query: string): Order[] => {
+    if (!query || !query.trim()) return [];
+    const normalizedQ = toEnDigits(query.trim().toLowerCase());
+    const digitsOnlyQ = normalizedQ.replace(/[^0-9]/g, '');
+    const cleanAlphaNumQ = normalizedQ.replace(/[^a-z0-9]/gi, '');
+    const cleanQ = normalizedQ.replace(/[\s-]/g, '');
+
+    return orders.filter(o => {
+      // 1. Order ID match (e.g. PH-10291, 10291, #10291)
+      const cleanId = (o.id || '').toLowerCase().replace(/[^a-z0-9]/gi, '');
+      const idMatch = cleanAlphaNumQ.length >= 2 && (cleanId.includes(cleanAlphaNumQ) || cleanAlphaNumQ.includes(cleanId));
+
+      // 2. Phone match (supports 017..., +88017..., partial 4-11 digits)
+      const orderPhoneNormalized = toEnDigits((o.customerPhone || '').toLowerCase());
+      const orderPhoneDigits = orderPhoneNormalized.replace(/[^0-9]/g, '');
+      let phoneMatch = false;
+      if (digitsOnlyQ.length >= 3) {
+        phoneMatch = 
+          orderPhoneDigits.includes(digitsOnlyQ) || 
+          digitsOnlyQ.includes(orderPhoneDigits) ||
+          (orderPhoneDigits.startsWith('880') && orderPhoneDigits.slice(3).includes(digitsOnlyQ)) ||
+          (orderPhoneDigits.startsWith('0') && orderPhoneDigits.slice(1).includes(digitsOnlyQ));
+      }
+
+      // 3. Email match
+      const cleanEmail = (o.customerEmail || '').trim().toLowerCase();
+      const emailMatch = cleanEmail.length >= 3 && (cleanEmail.includes(cleanQ) || cleanQ.includes(cleanEmail));
+
+      // 4. Customer Name match
+      const cleanName = (o.customerName || '').trim().toLowerCase();
+      const nameMatch = cleanName.length >= 3 && cleanName.includes(normalizedQ);
+
+      return idMatch || phoneMatch || emailMatch || nameMatch;
+    });
+  };
+
+  // 12. English-First Localization Helper
   const t = (key: TranslationKey, params?: Record<string, string | number>): string => {
-    const dict = translations[language] || translations.bn;
-    let text: string = dict[key] || translations.en[key] || key;
+    const dict = translations.en;
+    let text: string = dict[key] || translations.bn[key] || key;
     if (params) {
       Object.entries(params).forEach(([paramKey, val]) => {
         text = text.replace(new RegExp(`\\{${paramKey}\\}`, 'g'), String(val));
@@ -332,17 +812,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const getLocalized = (enVal?: string | null, bnVal?: string | null): string => {
-    if (language === 'bn') {
-      return (bnVal && bnVal.trim()) ? bnVal : (enVal || '');
-    }
     return (enVal && enVal.trim()) ? enVal : (bnVal || '');
   };
 
   // 8. WhatsApp & Call Order Generators
   const getWhatsAppOrderUrl = (product: Product, quantity = 1): string => {
-    // Normalize phone number (strip whitespace, hyphens, and leading + for wa.me)
-    const rawNumber = settings.whatsapp_number || '+8801576924003';
-    const cleanNumber = rawNumber.replace(/[^0-9]/g, '');
+    const rawNumber = settings.whatsapp_number || '01705776631';
+    let cleanNumber = rawNumber.replace(/[^0-9]/g, '');
+    if (cleanNumber.startsWith('01')) {
+      cleanNumber = '88' + cleanNumber;
+    }
 
     const productName = getLocalized(product.name_en, product.name_bn);
     const activePrice = product.sale_price !== null && product.sale_price !== undefined 
@@ -350,10 +829,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       : product.price;
 
     const pageUrl = window.location.origin + `/#product/${product.id}`;
-
-    const rawTemplate = language === 'bn' 
-      ? translations.bn.whatsapp_msg_template 
-      : translations.en.whatsapp_msg_template;
+    const rawTemplate = translations.en.whatsapp_msg_template;
 
     const message = rawTemplate
       .replace('{product_name}', productName)
@@ -366,7 +842,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const getCallOrderUrl = (): string => {
-    const raw = settings.phone_number || '01576-924003';
+    const raw = settings.phone_number || '01705776631';
     return `tel:${raw.replace(/[\s-]+/g, '')}`;
   };
 
@@ -592,9 +1068,37 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         clearFilters,
         getWhatsAppOrderUrl,
         getCallOrderUrl,
+        orders,
+        createOrder,
+        updateOrderStatus,
+        approveOrder,
+        rejectOrder,
+        deleteOrder,
+        filterOrdersByPhoneOrEmail,
+        isPlaceOrderOpen,
+        setIsPlaceOrderOpen,
+        checkoutItems,
+        openPlaceOrder,
+        closePlaceOrder,
+        isTrackingModalOpen,
+        setIsTrackingModalOpen,
+        trackingQuery,
+        setTrackingQuery,
+        cart,
+        addToCart,
+        removeFromCart,
+        updateCartQuantity,
+        clearCart,
+        isCartOpen,
+        setIsCartOpen,
         isAdminLoggedIn,
+        currentAdminUser,
+        adminUsers,
         loginAdmin,
         logoutAdmin,
+        addAdminUser,
+        updateAdminUser,
+        deleteAdminUser,
         addProduct,
         updateProduct,
         deleteProduct,

@@ -239,12 +239,12 @@ export const Footer: React.FC = () => {
               <div className="flex items-center gap-2.5">
                 <MessageCircle className="w-4 h-4 text-emerald-400 shrink-0" />
                 <a 
-                  href={`https://wa.me/${(settings.whatsapp_number || '+8801576924003').replace(/[^0-9]/g, '')}`}
+                  href={`https://wa.me/${(settings.whatsapp_number || '01705776631').replace(/[^0-9]/g, '').startsWith('01') ? '88' + (settings.whatsapp_number || '01705776631').replace(/[^0-9]/g, '') : (settings.whatsapp_number || '01705776631').replace(/[^0-9]/g, '')}`}
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="hover:text-emerald-300 font-mono"
                 >
-                  {settings.whatsapp_number}
+                  {settings.whatsapp_number || '01705776631'}
                 </a>
               </div>
               <div className="flex items-center gap-2.5">

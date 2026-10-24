@@ -13,6 +13,9 @@ import { ReturnPolicyPage } from './pages/ReturnPolicyPage';
 import { DeliveryInfoPage } from './pages/DeliveryInfoPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { AdminDashboard } from './pages/AdminDashboard';
+import { CartDrawer } from './components/CartDrawer';
+import { PlaceOrderModal } from './components/PlaceOrderModal';
+import { OrderTrackerModal } from './components/OrderTrackerModal';
 import { MessageCircle, Phone, ArrowUp, Sparkles, Check, Info, X } from 'lucide-react';
 
 const MainLayout: React.FC = () => {
@@ -27,7 +30,8 @@ const MainLayout: React.FC = () => {
     removeToast,
     products,
     selectedProductId,
-    getLocalized
+    getLocalized,
+    setSelectedCategorySlug
   } = useApp();
 
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -164,76 +168,163 @@ const MainLayout: React.FC = () => {
               />
             </div>
 
-            {/* 6. WhatsApp Concierge VIP Section */}
-            <section className="py-16 bg-[#181C22] text-white">
-              <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6">
-                <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 rounded-full text-xs text-[#E0A9B0] border border-white/10">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>{language === 'bn' ? 'ব্যক্তিগত পরামর্শ ও অর্ডার' : 'PERSONAL BEAUTY ADVISOR'}</span>
+            {/* 6. Dedicated Personal Beauty Advisor Section */}
+            <section className="py-16 bg-gradient-to-b from-[#181C22] to-[#1F252E] text-white">
+              <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+                <div className="text-center space-y-3 max-w-2xl mx-auto">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 rounded-full text-xs text-[#E0A9B0] border border-white/10 font-medium">
+                    <Sparkles className="w-3.5 h-3.5 text-[#E0A9B0]" />
+                    <span>PERSONAL BEAUTY ADVISOR</span>
+                  </div>
+                  
+                  <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif-luxury font-bold text-white">
+                    Personalized Skincare & Beauty Routine Consultation
+                  </h2>
+
+                  <p className="text-sm text-gray-300 leading-relaxed">
+                    Unsure which formulation or shade matches your skin profile? Explore our specialist-curated routines designed for authentic, lasting results.
+                  </p>
                 </div>
-                
-                <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif-luxury font-bold text-white max-w-2xl mx-auto">
-                  {language === 'bn' 
-                    ? 'আপনার ত্বকের জন্য কোনটি উপযুক্ত? কথা বলুন আমাদের সাথে' 
-                    : 'Unsure which product fits your skin routine? Chat with our specialist'}
-                </h2>
 
-                <p className="text-sm sm:text-base text-gray-300 max-w-xl mx-auto leading-relaxed">
-                  {language === 'bn'
-                    ? 'হোয়াটসঅ্যাপে সরাসরি চ্যাট করে পছন্দের শেড, ইনগ্রিডিয়েন্টস বা ব্যবহারবিধি সম্পর্কে বিস্তারিত জানুন।'
-                    : 'Receive expert shade matching and cosmetic recommendations instantly on WhatsApp.'}
-                </p>
+                {/* 3 Advisor Routine Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  
+                  <div className="p-6 rounded-2xl bg-white/5 border border-white/10 hover:border-[#B76E79]/50 transition-all space-y-4 flex flex-col justify-between">
+                    <div className="space-y-2.5">
+                      <div className="w-10 h-10 rounded-xl bg-[#B76E79]/20 text-[#E0A9B0] flex items-center justify-center font-bold text-sm">
+                        01
+                      </div>
+                      <h3 className="text-base font-semibold text-white font-serif-luxury">
+                        Skin Type & Barrier Care
+                      </h3>
+                      <p className="text-xs text-gray-300 leading-relaxed">
+                        Formulations for deep hydration, active brightening, gentle oil balance, and moisture barrier rejuvenation.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedCategorySlug('beauty-skincare');
+                        setCurrentView('beauty-skincare');
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      className="w-full py-2.5 px-4 bg-white/10 hover:bg-[#B76E79] text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+                    >
+                      Explore Skincare Regimen
+                    </button>
+                  </div>
 
-                <div className="pt-2 flex flex-wrap items-center justify-center gap-4">
+                  <div className="p-6 rounded-2xl bg-white/5 border border-white/10 hover:border-[#B76E79]/50 transition-all space-y-4 flex flex-col justify-between">
+                    <div className="space-y-2.5">
+                      <div className="w-10 h-10 rounded-xl bg-[#B76E79]/20 text-[#E0A9B0] flex items-center justify-center font-bold text-sm">
+                        02
+                      </div>
+                      <h3 className="text-base font-semibold text-white font-serif-luxury">
+                        Lady's Cosmetics & Glow
+                      </h3>
+                      <p className="text-xs text-gray-300 leading-relaxed">
+                        Curated shades, hydrating lip serums, and weightless mineral cosmetics that blend seamlessly for every occasion.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedCategorySlug('womens-collection');
+                        setCurrentView('womens-collection');
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      className="w-full py-2.5 px-4 bg-white/10 hover:bg-[#B76E79] text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+                    >
+                      Browse Lady's Collection
+                    </button>
+                  </div>
+
+                  <div className="p-6 rounded-2xl bg-white/5 border border-white/10 hover:border-[#B76E79]/50 transition-all space-y-4 flex flex-col justify-between">
+                    <div className="space-y-2.5">
+                      <div className="w-10 h-10 rounded-xl bg-[#B76E79]/20 text-[#E0A9B0] flex items-center justify-center font-bold text-sm">
+                        03
+                      </div>
+                      <h3 className="text-base font-semibold text-white font-serif-luxury">
+                        Gent's Grooming & Beard Care
+                      </h3>
+                      <p className="text-xs text-gray-300 leading-relaxed">
+                        Targeted solutions for coarse beard conditioning, clean shave soothing, electric trimming, and energizing hygiene.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedCategorySlug('mens-collection');
+                        setCurrentView('mens-collection');
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      className="w-full py-2.5 px-4 bg-white/10 hover:bg-[#B76E79] text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+                    >
+                      Explore Gent's Regimen
+                    </button>
+                  </div>
+
+                </div>
+
+                {/* Direct Consultation Hotline */}
+                <div className="p-4 bg-white/5 border border-white/10 rounded-2xl flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-rose-500/20 text-rose-300 flex items-center justify-center shrink-0">
+                      <Phone className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-semibold text-white">
+                        Need Live Beauty Routine Advice?
+                      </h4>
+                      <p className="text-xs text-gray-400">
+                        Speak directly with our in-house cosmetic advisor during store hours
+                      </p>
+                    </div>
+                  </div>
+
                   <a
-                    href={`https://wa.me/${(settings.whatsapp_number || '+8801576924003').replace(/[^0-9]/g, '')}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-6 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl flex items-center gap-2.5 shadow-lg transition-transform hover:-translate-y-0.5"
+                    href={`tel:${settings.phone_number || '01705776631'}`}
+                    className="px-5 py-2.5 bg-[#B76E79] hover:bg-[#A35C67] text-white text-xs sm:text-sm font-semibold rounded-xl flex items-center gap-2 transition-colors cursor-pointer shadow-sm"
                   >
-                    <MessageCircle className="w-5 h-5" />
-                    <span>WhatsApp: {settings.whatsapp_number}</span>
-                  </a>
-
-                  <a
-                    href={`tel:${settings.phone_number}`}
-                    className="px-6 py-3.5 bg-white/10 hover:bg-white/20 text-white text-sm font-semibold rounded-xl flex items-center gap-2 border border-white/20 transition-colors"
-                  >
-                    <Phone className="w-4 h-4 text-rose-300" />
-                    <span>{settings.phone_number}</span>
+                    <Phone className="w-4 h-4" />
+                    <span>Call Advisor: {settings.phone_number || '01705776631'}</span>
                   </a>
                 </div>
+
               </div>
             </section>
           </>
         );
 
       case 'all-products':
-        return <ProductGrid title={t('nav_all_products')} />;
+        return <ProductGrid title="Shop - All Collections" />;
 
       case 'beauty-skincare':
-        return <ProductGrid title={t('nav_beauty_skincare')} categoryFilterOverride="beauty-skincare" />;
-
-      case 'perfume-fragrance':
-        return <ProductGrid title={t('nav_perfume_fragrance')} categoryFilterOverride="perfume-fragrance" />;
-
-      case 'mens-collection':
-        return <ProductGrid title={t('nav_mens')} categoryFilterOverride="mens-collection" />;
+        return <ProductGrid title="Beauty & Skincare" categoryFilterOverride="beauty-skincare" />;
 
       case 'womens-collection':
-        return <ProductGrid title={t('nav_womens')} categoryFilterOverride="womens-collection" />;
+        return <ProductGrid title="Lady's Collection" categoryFilterOverride="womens-collection" />;
+
+      case 'mens-collection':
+        return <ProductGrid title="Gent's Collection" categoryFilterOverride="mens-collection" />;
+
+      case 'electric-gadgets':
+        return <ProductGrid title="Electric & Gadgets" categoryFilterOverride="electric-gadgets" />;
+
+      case 'perfume-fragrance':
+        return <ProductGrid title="Fragrances" categoryFilterOverride="perfume-fragrance" />;
 
       case 'makeup':
-        return <ProductGrid title={t('nav_makeup')} categoryFilterOverride="makeup" />;
+        return <ProductGrid title="Makeup & Cosmetics" categoryFilterOverride="makeup" />;
 
       case 'hair-care':
-        return <ProductGrid title={t('nav_haircare')} categoryFilterOverride="hair-care" />;
+        return <ProductGrid title="Hair Care" categoryFilterOverride="hair-care" />;
 
       case 'personal-care-grooming':
-        return <ProductGrid title={t('nav_grooming')} categoryFilterOverride="personal-care-grooming" />;
+        return <ProductGrid title="Personal Care & Grooming" categoryFilterOverride="personal-care-grooming" />;
 
       case 'lifestyle-accessories':
-        return <ProductGrid title={t('nav_lifestyle')} categoryFilterOverride="lifestyle-accessories" />;
+        return <ProductGrid title="Lifestyle & Accessories" categoryFilterOverride="lifestyle-accessories" />;
 
       case 'product-details':
         return <ProductDetailsPage />;
@@ -289,19 +380,21 @@ const MainLayout: React.FC = () => {
           </button>
         )}
 
-        {/* WhatsApp Quick Chat Floating Pill */}
-        <a
-          href={`https://wa.me/${(settings.whatsapp_number || '+8801576924003').replace(/[^0-9]/g, '')}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="group flex items-center gap-2.5 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full shadow-xl transition-all duration-300 hover:scale-105"
-          title="Direct WhatsApp Support"
-        >
-          <MessageCircle className="w-5 h-5 fill-current" />
-          <span className="text-xs font-semibold whitespace-nowrap hidden sm:inline">
-            {language === 'bn' ? 'হোয়াটসঅ্যাপে অর্ডার করুন' : 'Order on WhatsApp'}
-          </span>
-        </a>
+        {/* WhatsApp Quick Chat Floating Pill (Hidden on home page per user request) */}
+        {currentView !== 'home' && (
+          <a
+            href={`https://wa.me/${(settings.whatsapp_number || '01705776631').replace(/[^0-9]/g, '')}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group flex items-center gap-2.5 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full shadow-xl transition-all duration-300 hover:scale-105"
+            title="Direct WhatsApp Support: 01705776631"
+          >
+            <MessageCircle className="w-5 h-5 fill-current" />
+            <span className="text-xs font-semibold whitespace-nowrap hidden sm:inline">
+              Order on WhatsApp
+            </span>
+          </a>
+        )}
 
       </div>
 
@@ -337,6 +430,15 @@ const MainLayout: React.FC = () => {
           ))}
         </div>
       )}
+
+      {/* Shopping Bag / Cart Drawer */}
+      <CartDrawer />
+
+      {/* Place Order Checkout Modal */}
+      <PlaceOrderModal />
+
+      {/* Order Tracker Modal (Filtered by Mobile Phone or Email Account) */}
+      <OrderTrackerModal />
 
     </div>
   );

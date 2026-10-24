@@ -14,7 +14,9 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
-  Info
+  Info,
+  ShoppingBag,
+  Zap
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { ProductCard } from '../components/ProductCard';
@@ -31,7 +33,9 @@ export const ProductDetailsPage: React.FC = () => {
     language,
     getWhatsAppOrderUrl,
     getCallOrderUrl,
-    showToast 
+    showToast,
+    openPlaceOrder,
+    addToCart
   } = useApp();
 
   const product = products.find(p => p.id === selectedProductId);
@@ -319,15 +323,59 @@ export const ProductDetailsPage: React.FC = () => {
                 </div>
               )}
 
-              {/* Action Buttons: WhatsApp Order & Direct Call */}
+              {/* Action Buttons: Place Order, Add to Bag, WhatsApp & Call */}
               <div className="pt-3 space-y-3">
+                {/* Primary Row: Place Order Now & Add to Bag */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    disabled={isOutOfStock}
+                    onClick={() => {
+                      if (isOutOfStock) return;
+                      openPlaceOrder([
+                        {
+                          productId: product.id,
+                          sku: product.sku,
+                          name_en: product.name_en,
+                          name_bn: product.name_bn,
+                          price: currentPrice,
+                          quantity,
+                          image: activeImage.storage_path
+                        }
+                      ]);
+                    }}
+                    className={`py-3.5 px-6 rounded-xl font-semibold text-sm sm:text-base flex items-center justify-center gap-2.5 shadow-md transition-all transform active:scale-98 cursor-pointer ${
+                      isOutOfStock
+                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        : 'bg-[#1E232A] hover:bg-[#2D3748] text-white'
+                    }`}
+                  >
+                    <Zap className="w-4 h-4 text-amber-400 fill-current" />
+                    <span>{isOutOfStock ? t('out_of_stock') : (language === 'bn' ? 'এখনই অর্ডার করুন' : 'Place Order Now')}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={isOutOfStock}
+                    onClick={() => {
+                      if (isOutOfStock) return;
+                      addToCart(product, quantity);
+                    }}
+                    className="py-3.5 px-6 rounded-xl font-semibold text-sm sm:text-base flex items-center justify-center gap-2.5 bg-[#FAF5F6] hover:bg-[#F3E8EB] text-[#B76E79] border-2 border-[#B76E79]/30 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ShoppingBag className="w-4 h-4" />
+                    <span>{language === 'bn' ? 'ব্যাগে যুক্ত করুন' : 'Add to Bag'}</span>
+                  </button>
+                </div>
+
+                {/* WhatsApp Concierge Order Button */}
                 <a
                   href={getWhatsAppOrderUrl(product, quantity)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={`w-full py-4 px-6 rounded-xl font-semibold text-sm sm:text-base flex items-center justify-center gap-3 shadow-md transition-all transform active:scale-98 ${
+                  className={`w-full py-3.5 px-6 rounded-xl font-semibold text-sm sm:text-base flex items-center justify-center gap-3 shadow-sm transition-all transform active:scale-98 ${
                     isOutOfStock 
-                      ? 'bg-gray-400 text-white cursor-not-allowed pointer-events-none' 
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed pointer-events-none' 
                       : 'bg-emerald-600 hover:bg-emerald-700 text-white'
                   }`}
                 >
@@ -335,10 +383,11 @@ export const ProductDetailsPage: React.FC = () => {
                   <span>{t('whatsapp_order_btn')}</span>
                 </a>
 
+                {/* Secondary Row: Call Order & Share */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <a
                     href={getCallOrderUrl()}
-                    className="py-3 px-4 rounded-xl border border-[#1E232A] text-[#1E232A] hover:bg-[#1E232A] hover:text-white font-medium text-xs sm:text-sm flex items-center justify-center gap-2 transition-colors"
+                    className="py-2.5 px-4 rounded-xl border border-[#1E232A] text-[#1E232A] hover:bg-[#1E232A] hover:text-white font-medium text-xs sm:text-sm flex items-center justify-center gap-2 transition-colors"
                   >
                     <Phone className="w-4 h-4 text-[#B76E79]" />
                     <span>{t('call_order_btn')}</span>
@@ -346,7 +395,7 @@ export const ProductDetailsPage: React.FC = () => {
 
                   <button
                     onClick={handleShare}
-                    className="py-3 px-4 rounded-xl border border-[#E5D5DA] bg-[#FAF8F7] hover:bg-[#EDE2E5] text-[#1E232A] font-medium text-xs sm:text-sm flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                    className="py-2.5 px-4 rounded-xl border border-[#E5D5DA] bg-[#FAF8F7] hover:bg-[#EDE2E5] text-[#1E232A] font-medium text-xs sm:text-sm flex items-center justify-center gap-2 transition-colors cursor-pointer"
                   >
                     <Share2 className="w-4 h-4 text-[#718096]" />
                     <span>{t('share_product')}</span>

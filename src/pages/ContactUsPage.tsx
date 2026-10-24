@@ -22,12 +22,13 @@ export const ContactUsPage: React.FC = () => {
     e.preventDefault();
     if (!contactMsg.trim()) return;
 
-    const rawNumber = settings.whatsapp_number || '+8801576924003';
-    const cleanNumber = rawNumber.replace(/[^0-9]/g, '');
+    const rawNumber = settings.whatsapp_number || '01705776631';
+    let cleanNumber = rawNumber.replace(/[^0-9]/g, '');
+    if (cleanNumber.startsWith('01')) {
+      cleanNumber = '88' + cleanNumber;
+    }
 
-    const greeting = language === 'bn' 
-      ? `আসসালামু আলাইকুম Purchase Hub,\nনাম: ${contactName || 'গ্রাহক'}\nফোন: ${contactPhone || 'প্রযোজ্য নয়'}\nবার্তা: ${contactMsg}`
-      : `Hello Purchase Hub,\nName: ${contactName || 'Customer'}\nPhone: ${contactPhone || 'N/A'}\nMessage: ${contactMsg}`;
+    const greeting = `Hello Purchase Hub,\nName: ${contactName || 'Customer'}\nPhone: ${contactPhone || 'N/A'}\nMessage: ${contactMsg}`;
 
     const url = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(greeting)}`;
     window.open(url, '_blank', 'noopener,noreferrer');
@@ -88,12 +89,12 @@ export const ContactUsPage: React.FC = () => {
                     {t('footer_whatsapp')}
                   </span>
                   <a 
-                    href={`https://wa.me/${(settings.whatsapp_number || '+8801576924003').replace(/[^0-9]/g, '')}`}
+                    href={`https://wa.me/8801705776631`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="font-medium text-[#1E232A] hover:text-emerald-600 font-mono"
                   >
-                    {settings.whatsapp_number}
+                    {settings.whatsapp_number || '01705776631'}
                   </a>
                 </div>
               </div>

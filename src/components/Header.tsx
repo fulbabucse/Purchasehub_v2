@@ -8,7 +8,10 @@ import {
   ShieldCheck, 
   ChevronRight,
   Sparkles,
-  ShoppingBag
+  ShoppingBag,
+  Package,
+  LogOut,
+  ChevronDown
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
@@ -24,11 +27,15 @@ export const Header: React.FC = () => {
     settings,
     getCallOrderUrl,
     isAdminLoggedIn,
-    setSelectedCategorySlug
+    setSelectedCategorySlug,
+    cart,
+    setIsCartOpen,
+    setIsTrackingModalOpen
   } = useApp();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const totalCartItems = cart.reduce((acc, item) => acc + item.quantity, 0);
 
   // Prevent background scrolling when mobile menu drawer is open
   useEffect(() => {
@@ -81,147 +88,164 @@ export const Header: React.FC = () => {
             <div className="flex items-center gap-2 truncate">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
               <span className="font-medium tracking-wide truncate">
-                {language === 'bn' 
-                  ? 'সারা বাংলাদেশে হোম ডেলিভারি | ১০০% আসল পণ্য' 
-                  : 'Nationwide Delivery in Bangladesh | 100% Authentic'}
+                Nationwide Delivery in Bangladesh | 100% Authentic Products
               </span>
             </div>
 
             <div className="flex items-center gap-3 shrink-0 text-[11px] sm:text-xs">
               <a 
-                href={`https://wa.me/${(settings.whatsapp_number || '+8801576924003').replace(/[^0-9]/g, '')}`}
+                href={`https://wa.me/8801705776631`}
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="hidden sm:inline-flex items-center gap-1.5 text-emerald-400 hover:text-emerald-300 transition-colors"
               >
                 <MessageCircle className="w-3.5 h-3.5" />
-                <span>WhatsApp: {settings.whatsapp_number}</span>
+                <span>WhatsApp: {settings.whatsapp_number || '01705776631'}</span>
               </a>
               <a 
                 href={getCallOrderUrl()} 
-                className="hidden md:inline-flex items-center gap-1.5 hover:text-white transition-colors"
+                className="inline-flex items-center gap-1.5 hover:text-white transition-colors"
               >
                 <Phone className="w-3.5 h-3.5 text-rose-300" />
-                <span>{settings.phone_number}</span>
+                <span>Call: {settings.phone_number || '01705776631'}</span>
               </a>
-              <button 
-                onClick={() => handleNav('admin')}
-                className="inline-flex items-center gap-1 text-[#E0A9B0] hover:text-white transition-colors font-medium cursor-pointer"
-                title="Admin Dashboard"
-              >
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>{isAdminLoggedIn ? (language === 'bn' ? 'অ্যাডমিন' : 'Admin') : (language === 'bn' ? 'অ্যাডমিন' : 'Admin')}</span>
-              </button>
             </div>
 
           </div>
         </div>
 
-        {/* Main Navbar: Responsive 3-Zone Contract */}
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 sm:h-18 flex items-center justify-between gap-2 sm:gap-4 lg:gap-8">
+        {/* Main Navbar: Responsive 3-Zone Contract with Laptop & Desktop Polish */}
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 h-16 sm:h-18 flex items-center justify-between gap-3 lg:gap-4 xl:gap-6">
           
-          {/* Zone 1: Single Brand Wordmark */}
+          {/* Zone 1: Brand Wordmark */}
           <button 
             onClick={() => handleNav('home')} 
-            className="text-left group whitespace-nowrap shrink-0 flex items-center gap-2 min-w-0 cursor-pointer"
+            className="text-left group whitespace-nowrap shrink-0 flex items-center gap-2.5 cursor-pointer"
           >
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-tr from-[#B76E79] to-[#D97793] flex items-center justify-center text-white font-serif-luxury font-bold text-sm sm:text-base shadow-sm shrink-0">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#B76E79] to-[#D97793] flex items-center justify-center text-white font-serif-luxury font-bold text-sm shadow-sm shrink-0">
               P
             </div>
-            <span className="font-serif-luxury text-base sm:text-xl lg:text-2xl font-bold tracking-tight text-[#1E232A] group-hover:text-[#B76E79] transition-colors truncate">
+            <span className="font-serif-luxury text-lg sm:text-xl lg:text-xl xl:text-2xl font-bold tracking-tight text-[#1E232A] group-hover:text-[#B76E79] transition-colors truncate">
               PURCHASE HUB
             </span>
           </button>
 
-          {/* Zone 2: 4-5 Navigation Links (Desktop) */}
-          <nav className="hidden lg:flex items-center gap-6 xl:gap-7 text-sm font-medium text-[#4A5568]">
-            {navItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => handleNav(item.view)}
-                className={`whitespace-nowrap shrink-0 transition-colors py-1 relative cursor-pointer ${
-                  currentView === item.view 
-                    ? 'text-[#B76E79] font-semibold' 
-                    : 'hover:text-[#1E232A]'
-                }`}
-              >
-                {item.label}
-                {currentView === item.view && (
-                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#B76E79] rounded-full" />
-                )}
-              </button>
-            ))}
+          {/* Zone 2: Navigation Links (Desktop & Laptop) */}
+          <nav className="hidden lg:flex items-center gap-3 xl:gap-5 2xl:gap-6 text-xs xl:text-sm font-medium text-[#4A5568]">
             <button
-              onClick={() => handleNav('about-us')}
-              className={`whitespace-nowrap shrink-0 transition-colors py-1 cursor-pointer ${
-                currentView === 'about-us' ? 'text-[#B76E79] font-semibold' : 'hover:text-[#1E232A]'
+              onClick={() => handleNav('home')}
+              className={`whitespace-nowrap transition-colors py-1 px-1 cursor-pointer ${
+                currentView === 'home' ? 'text-[#B76E79] font-bold border-b-2 border-[#B76E79]' : 'hover:text-[#1E232A]'
               }`}
             >
-              {t('nav_about')}
+              Home
             </button>
             <button
-              onClick={() => handleNav('contact-us')}
-              className={`whitespace-nowrap shrink-0 transition-colors py-1 cursor-pointer ${
-                currentView === 'contact-us' ? 'text-[#B76E79] font-semibold' : 'hover:text-[#1E232A]'
+              onClick={() => handleNav('all-products')}
+              className={`whitespace-nowrap transition-colors py-1 px-1 cursor-pointer ${
+                currentView === 'all-products' ? 'text-[#B76E79] font-bold border-b-2 border-[#B76E79]' : 'hover:text-[#1E232A]'
               }`}
             >
-              {t('nav_contact')}
+              Shop
+            </button>
+            <button
+              onClick={() => handleNav('beauty-skincare', 'beauty-skincare')}
+              className={`whitespace-nowrap transition-colors py-1 px-1 cursor-pointer ${
+                currentView === 'beauty-skincare' ? 'text-[#B76E79] font-bold border-b-2 border-[#B76E79]' : 'hover:text-[#1E232A]'
+              }`}
+            >
+              Beauty & Skincare
+            </button>
+            <button
+              onClick={() => handleNav('womens-collection', 'womens-collection')}
+              className={`whitespace-nowrap transition-colors py-1 px-1 cursor-pointer ${
+                currentView === 'womens-collection' ? 'text-[#B76E79] font-bold border-b-2 border-[#B76E79]' : 'hover:text-[#1E232A]'
+              }`}
+            >
+              Lady's
+            </button>
+            <button
+              onClick={() => handleNav('mens-collection', 'mens-collection')}
+              className={`whitespace-nowrap transition-colors py-1 px-1 cursor-pointer ${
+                currentView === 'mens-collection' ? 'text-[#B76E79] font-bold border-b-2 border-[#B76E79]' : 'hover:text-[#1E232A]'
+              }`}
+            >
+              Gent's
+            </button>
+            <button
+              onClick={() => handleNav('electric-gadgets', 'electric-gadgets')}
+              className={`whitespace-nowrap transition-colors py-1 px-1 cursor-pointer ${
+                currentView === 'electric-gadgets' ? 'text-[#B76E79] font-bold border-b-2 border-[#B76E79]' : 'hover:text-[#1E232A]'
+              }`}
+            >
+              Electric & Gadgets
+            </button>
+            <button
+              onClick={() => handleNav('about-us')}
+              className={`whitespace-nowrap transition-colors py-1 px-1 cursor-pointer ${
+                currentView === 'about-us' ? 'text-[#B76E79] font-bold border-b-2 border-[#B76E79]' : 'hover:text-[#1E232A]'
+              }`}
+            >
+              About
             </button>
           </nav>
 
           {/* Zone 3: Primary Action & Utilities */}
-          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
             
             {/* Quick Search Toggle */}
             <button
               onClick={() => setSearchOpen(!searchOpen)}
               className="p-2 text-[#4A5568] hover:text-[#1E232A] hover:bg-[#F3E8EB]/60 rounded-xl transition-colors cursor-pointer"
               aria-label="Search Catalog"
+              title="Search Catalog"
             >
-              <Search className="w-4 h-4 sm:w-5 sm:h-5" />
+              <Search className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
             </button>
 
-            {/* Language Switcher Button (Bengali / English) */}
-            <div className="flex items-center bg-[#F3E8EB] p-0.5 rounded-lg border border-[#E8D4D9]">
-              <button
-                onClick={() => setLanguage('bn')}
-                className={`px-2 py-1 text-[11px] sm:text-xs font-semibold rounded-md transition-all whitespace-nowrap cursor-pointer ${
-                  language === 'bn' 
-                    ? 'bg-white text-[#1E232A] shadow-xs' 
-                    : 'text-[#64748B] hover:text-[#1E232A]'
-                }`}
-                title="বাংলা ভাষা"
-              >
-                বাংলা
-              </button>
-              <button
-                onClick={() => setLanguage('en')}
-                className={`px-2 py-1 text-[11px] sm:text-xs font-semibold rounded-md transition-all whitespace-nowrap cursor-pointer ${
-                  language === 'en' 
-                    ? 'bg-white text-[#1E232A] shadow-xs' 
-                    : 'text-[#64748B] hover:text-[#1E232A]'
-                }`}
-                title="English"
-              >
-                EN
-              </button>
-            </div>
+            {/* Track Order Button */}
+            <button
+              type="button"
+              onClick={() => setIsTrackingModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-[#1E232A] hover:text-[#B76E79] bg-white hover:bg-[#FDF2F4] border border-[#E8D4D9] rounded-xl transition-all cursor-pointer shadow-2xs whitespace-nowrap"
+              title="Track Order by Phone or Email"
+            >
+              <Package className="w-3.5 h-3.5 text-[#B76E79] shrink-0" />
+              <span className="hidden sm:inline">Track Order</span>
+            </button>
 
-            {/* WhatsApp CTA (Desktop) */}
+            {/* Shopping Bag / Cart Drawer Button */}
+            <button
+              type="button"
+              onClick={() => setIsCartOpen(true)}
+              className="relative inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-[#1E232A] hover:text-[#B76E79] bg-white hover:bg-[#FDF2F4] border border-[#E8D4D9] rounded-xl transition-all cursor-pointer shadow-2xs whitespace-nowrap"
+              title="Shopping Bag"
+            >
+              <ShoppingBag className="w-4 h-4 text-[#B76E79] shrink-0" />
+              <span className="hidden sm:inline">Bag</span>
+              {totalCartItems > 0 && (
+                <span className="w-4.5 h-4.5 rounded-full bg-[#B76E79] text-white text-[10px] font-bold flex items-center justify-center shrink-0">
+                  {totalCartItems}
+                </span>
+              )}
+            </button>
+
+            {/* WhatsApp CTA (Visible on desktop & laptop) */}
             <a
-              href={`https://wa.me/${(settings.whatsapp_number || '+8801576924003').replace(/[^0-9]/g, '')}`}
+              href={`https://wa.me/8801705776631`}
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden md:inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold text-white bg-[#1E232A] hover:bg-[#2D3748] rounded-xl transition-colors whitespace-nowrap shadow-xs"
+              className="hidden lg:inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors whitespace-nowrap shadow-xs"
+              title="Chat on WhatsApp: 01705776631"
             >
-              <MessageCircle className="w-3.5 h-3.5 text-emerald-400" />
-              <span>{t('whatsapp_order_header')}</span>
+              <MessageCircle className="w-3.5 h-3.5 shrink-0" />
+              <span>WhatsApp</span>
             </a>
 
             {/* Mobile Hamburger Toggle Button */}
             <button
               onClick={() => setMobileMenuOpen(true)}
-              className="lg:hidden p-2 text-[#1E232A] hover:bg-[#F3E8EB]/60 rounded-xl transition-colors cursor-pointer"
+              className="lg:hidden p-2 text-[#1E232A] hover:bg-[#F3E8EB]/60 rounded-xl transition-colors cursor-pointer shrink-0"
               aria-label="Open mobile menu"
             >
               <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
@@ -313,52 +337,74 @@ export const Header: React.FC = () => {
                 />
               </form>
 
-              {/* Language Switcher in Drawer */}
-              <div className="flex items-center justify-between p-2.5 bg-[#FAF8F7] rounded-xl border border-[#EDE2E5]">
-                <span className="text-xs font-semibold text-[#718096]">
-                  {language === 'bn' ? 'ভাষা পরিবর্তন করুন' : 'Select Language'}:
-                </span>
-                <div className="flex items-center bg-[#EDE2E5] p-0.5 rounded-lg">
-                  <button
-                    onClick={() => setLanguage('bn')}
-                    className={`px-2.5 py-1 text-xs font-bold rounded-md ${
-                      language === 'bn' ? 'bg-white text-[#1E232A] shadow-xs' : 'text-[#718096]'
-                    }`}
-                  >
-                    বাংলা
-                  </button>
-                  <button
-                    onClick={() => setLanguage('en')}
-                    className={`px-2.5 py-1 text-xs font-bold rounded-md ${
-                      language === 'en' ? 'bg-white text-[#1E232A] shadow-xs' : 'text-[#718096]'
-                    }`}
-                  >
-                    English
-                  </button>
-                </div>
+              {/* Order Tracking & Cart in Mobile Drawer */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    setIsTrackingModalOpen(true);
+                  }}
+                  className="p-3 bg-white rounded-xl border border-[#EDE2E5] hover:border-[#B76E79] text-left transition-all cursor-pointer shadow-2xs group"
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <Package className="w-4 h-4 text-[#B76E79]" />
+                    <span className="font-bold text-xs text-[#1E232A] group-hover:text-[#B76E79]">
+                      Track Order
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-gray-500">
+                    By Phone or Email
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    setIsCartOpen(true);
+                  }}
+                  className="p-3 bg-white rounded-xl border border-[#EDE2E5] hover:border-[#B76E79] text-left transition-all cursor-pointer shadow-2xs group"
+                >
+                  <div className="flex items-center justify-between gap-1 mb-1">
+                    <div className="flex items-center gap-1.5">
+                      <ShoppingBag className="w-4 h-4 text-[#B76E79]" />
+                      <span className="font-bold text-xs text-[#1E232A] group-hover:text-[#B76E79]">
+                        Shopping Bag
+                      </span>
+                    </div>
+                    {totalCartItems > 0 && (
+                      <span className="px-1.5 py-0.5 rounded-full bg-[#B76E79] text-white text-[10px] font-bold">
+                        {totalCartItems}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-gray-500">
+                    {totalCartItems > 0 
+                      ? `${totalCartItems} items`
+                      : 'Bag empty'}
+                  </p>
+                </button>
               </div>
 
               {/* Navigation Items */}
               <div className="space-y-1">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-[#A0AEC0] block mb-2 px-2">
-                  {language === 'bn' ? 'ক্যাটালগ মেনু' : 'Navigation Menu'}
+                  Catalog Menu
                 </span>
 
                 {[
-                  { label: t('nav_home'), view: 'home' },
-                  { label: t('nav_all_products'), view: 'all-products' },
-                  { label: t('nav_beauty_skincare'), view: 'beauty-skincare', slug: 'beauty-skincare' },
-                  { label: t('nav_perfume'), view: 'perfume-fragrance', slug: 'perfume-fragrance' },
-                  { label: t('nav_mens'), view: 'mens-collection', slug: 'mens-collection' },
-                  { label: t('nav_womens'), view: 'womens-collection', slug: 'womens-collection' },
-                  { label: t('nav_makeup'), view: 'makeup', slug: 'makeup' },
-                  { label: t('nav_haircare'), view: 'hair-care', slug: 'hair-care' },
-                  { label: t('nav_grooming'), view: 'personal-care-grooming', slug: 'personal-care-grooming' },
-                  { label: t('nav_lifestyle'), view: 'lifestyle-accessories', slug: 'lifestyle-accessories' },
+                  { label: 'Home', view: 'home' },
+                  { label: 'Shop', view: 'all-products' },
+                  { label: 'Beauty & Skincare', view: 'beauty-skincare', slug: 'beauty-skincare' },
+                  { label: "Lady's", view: 'womens-collection', slug: 'womens-collection' },
+                  { label: "Gent's", view: 'mens-collection', slug: 'mens-collection' },
+                  { label: 'Electric & Gadgets', view: 'electric-gadgets', slug: 'electric-gadgets' },
+                  { label: 'About', view: 'about-us' },
                 ].map((item) => (
                   <button
                     key={item.label}
-                    onClick={() => handleNav(item.view, item.slug)}
+                    onClick={() => handleNav(item.view, (item as any).slug)}
                     className={`w-full text-left py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-between transition-colors cursor-pointer ${
                       currentView === item.view 
                         ? 'bg-[#FDF2F4] text-[#B76E79]' 
@@ -374,7 +420,7 @@ export const Header: React.FC = () => {
               {/* Information & Policies */}
               <div className="pt-3 border-t border-[#F0E4E7] space-y-1">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-[#A0AEC0] block mb-1 px-2">
-                  {language === 'bn' ? 'তথ্য ও পলিসি' : 'Information & Policies'}
+                  Customer Care & Policies
                 </span>
                 {[
                   { label: t('nav_about'), view: 'about-us' },
@@ -382,7 +428,6 @@ export const Header: React.FC = () => {
                   { label: t('policy_delivery'), view: 'delivery-info' },
                   { label: t('policy_returns'), view: 'return-policy' },
                   { label: t('policy_privacy'), view: 'privacy-policy' },
-                  { label: t('nav_admin'), view: 'admin' },
                 ].map((item) => (
                   <button
                     key={item.view}
@@ -400,20 +445,20 @@ export const Header: React.FC = () => {
             {/* Drawer Footer Actions (WhatsApp & Call) */}
             <div className="p-4 border-t border-[#F0E4E7] bg-[#FAF8F7] space-y-2">
               <a
-                href={`https://wa.me/${(settings.whatsapp_number || '+8801576924003').replace(/[^0-9]/g, '')}`}
+                href={`https://wa.me/8801705776631`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs sm:text-sm font-semibold shadow-xs transition-colors"
               >
                 <MessageCircle className="w-4 h-4" />
-                <span>WhatsApp: {settings.whatsapp_number}</span>
+                <span>WhatsApp: {settings.whatsapp_number || '01705776631'}</span>
               </a>
               <a
                 href={getCallOrderUrl()}
                 className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#1E232A] hover:bg-[#2D3748] text-white rounded-xl text-xs font-medium transition-colors"
               >
                 <Phone className="w-3.5 h-3.5 text-rose-300" />
-                <span>{language === 'bn' ? 'সরাসরি কল করুন' : 'Call to Order'}: {settings.phone_number}</span>
+                <span>Call to Order: {settings.phone_number || '01705776631'}</span>
               </a>
             </div>
 
